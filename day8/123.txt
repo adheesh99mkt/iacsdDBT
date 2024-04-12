@@ -1,0 +1,22 @@
+select cid,cname,fname
+from courses c left join faculty f on c.fid=f.facid
+where f.fname is null
+union
+select cid,cname,fname
+from courses c right join faculty f on c.fid=f.facid
+where c.cname is null;
+
+select cname,fname,null
+from courses c right join faculty f
+on c.fid=f.facid
+where c.cname is null
+union
+select cname,null,rname
+from courses c right join room r
+on c.rid=r.roomid
+where c.cname is null;
+
+
+
+constraint chko check(team1!=team2)
+constraint chkw check(winner in(team1,team2))

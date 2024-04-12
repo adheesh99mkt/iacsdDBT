@@ -1,0 +1,19 @@
+ create table semp(
+    empno int primary key,
+    empname varchar(20),
+    basic float(9,2),
+    deptno int
+    );
+
+insert into semp values(0001, 'SUNIL', 6000, 10 );
+insert into semp values(0002, 'HIREN', 8000, 20 );
+insert into semp values(0003, 'ALI', 4000, 10);
+insert into semp values(0004, 'GEORGE', 6000,20);
+
+create table sdept(
+deptno int,
+deptname varchar(20)
+);
+
+insert into sdept values(10, 'Development');
+insert into sdept values(20,'Training');

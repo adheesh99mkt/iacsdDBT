@@ -1,0 +1,59 @@
+create table vehicle(
+vid int primary key,
+vname varchar(20),
+price int,
+descr varchar(20)
+);
+
+create table customer(
+custid int primary key,
+cname varchar(20),
+address varchar(20)
+);
+
+
+create table cust_vehicle(
+custid int,
+vid int,
+sid int,
+buy_price int,
+constraint fkcustid foreign key(custid) references customer(custid),
+constraint fkvid foreign key(vid) references vehicle(vid),
+constraint fksid foreign key(sid) references salesman(sid),
+primary key(custid,vid)
+);
+
+
+
+
+insert into vehicle values(1,'activa',80000,'super');
+insert into vehicle values(2,'santro',800000,'elegant');
+insert into vehicle values(3,'motorbike',100000,'speedy');
+
+insert into customer values(1,'nilima','pimpri');
+insert into customer values(2,'ganesh','pune');
+insert into customer values(3,'pankaj','mumbai');
+
+insert into cust_vehicle values(1,1,1,75000);
+insert into cust_vehicle values(1,2,1,790000);
+insert into cust_vehicle values(2,3,2,80000);
+insert into cust_vehicle values(3,3,2,75000);
+insert into cust_vehicle values(3,2,1,800000);
+
+
+
+ select c.cname,v.vname,s.sname,v.price-cv.buy_price discount
+    from customer c,vehicle v,salesman s,cust_vehicle cv
+    where (c.custid=cv.custid and v.vid=cv.vid and s.sid=cv.sid);
+
+
+
+delimiter //
+create procedure getmin(in edeptno int,out minsal float(9,2))
+begin
+select min(sal) into minsal from emp
+where deptno=edeptno;
+end//
+delimiter ;
+call getmin(10,@m);
+select @m;

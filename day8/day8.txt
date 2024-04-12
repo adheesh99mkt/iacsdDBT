@@ -1,0 +1,331 @@
+1.
+delimiter //
+create procedure insert_emp(in peno int,in pename varchar(20),in psal float(9,2),
+in pjob varchar(20),in phiredate date)
+
+begin
+insert into emp(empno,ename,sal,job,hiredate)
+values(peno,pename,psal,pjob,phiredate);
+end//
+
+delimiter;
+
+2.
+delimiter //
+create procedure delete_emp(in deno int)
+begin
+delete from emp
+where empno=deno;
+end//
+
+delimiter ;
+call delete_emp(1002);
+
+3.
+delimiter //
+create procedure salfilter(in esal float(9,2))
+begin
+select e.empno,e.ename,d.deptno,d.dname
+from emp e,dept d
+where e.deptno=d.deptno
+and e.sal>esal;
+end//
+
+delimiter ;
+
+call salfilter(2500);
+
+4.
+delimiter //
+create procedure emp_agg(in edeptno int,out ecnt int,out emin float(9,2),
+out emax float(9,2),out eavg float(9,2))
+
+begin
+
+select count(*),min(sal),max(sal),avg(sal) into ecnt,emin,emax,eavg
+from emp
+where deptno=edeptno;
+
+end//
+
+delimiter ;
+
+call emp_agg(10,@c,@min,@max,@avg);
+
+select @c,@min,@max,@avg;
+
+5.
+delimiter //
+
+create procedure printPrdSalCat()
+
+begin
+
+select p.prodid,p.pname,c.cid,c.cname,s.sid,s.sname
+from prdct p,catgry c,saleman s
+where(c.cid =p.catid and s.sid=p.sid);
+
+end//
+
+delimiter ;
+
+call printPrdSalcat;
+
+6.
+
+delimiter //
+
+create procedure _cust_vehicle(in vcname varchar(20))
+
+begin
+select v.vname from vehicle v
+where v.vid in(select cv.vid from cust_vehicle cv
+where cv.custid=(select c.custid from customer c 
+where c.cname=vcname));
+end//
+ delimiter ;
+
+call _cust_vehicle('nilima');
+
+7.
+
+delimiter //
+
+create procedure expemp()
+begin
+declare vfinished,vcnt int default 0;
+declare vempno,vdeptno int;
+declare vename,vjob,status varchar(20);
+declare vsal,vavg float(9,2);
+declare empcur cursor for select empno,ename,job,sal,deptno from emp;
+declare continue handler for NOT FOUND set vfinished=1;
+open empcur;
+label1:loop
+	fetch empcur into vempno,vename,vjob,vsal,vdeptno;
+	set vcnt=vcnt+1;
+	if vfinished=1 then
+		if vcnt=0 then
+			select"empty table";
+		end if;
+		leave label1;
+	end if;
+
+select avg(sal) into vavg from emp
+where deptno=vdeptno;
+if vsal>vavg then
+	set status="greater";
+elseif vsal<vavg then
+	set status="lesser";
+else
+	set status="Equal";
+end if;
+select vempno,vename,vjob,vsal,vavg,status;
+end loop;
+close empcur;
+end//
+
+delimiter ;
+
+8.
+delimiter //
+create procedure updatesal()
+begin
+declare vfinished int default 0;
+declare vempno,exp int ;
+declare vename,vjob varchar(20);
+declare vsal float(9,2);
+declare vhiredate date;
+declare empcur cursor for select empno,ename,job,sal,hiredate from emp;
+declare continue handler for NOT FOUND set vfinished=1;
+open empcur;
+label1:loop
+fetch empcur into vempno,vename,vjob,vsal,vhiredate;
+	if vfinished=1 then
+		leave label1;
+	end if;
+select floor(datediff(curdate(),hiredate)/365) into exp from emp
+where empno=vempno;
+if exp<= 41 then
+	update emp
+	set sal=vsal
+	where empno=vempno; 
+elseif exp<=45 then
+	update emp
+	set sal=vsal*1.2
+	where empno=vempno;
+else
+	update emp
+	set sal=vsal*1.25
+	where empno=vempno;
+end if;
+
+select vempno,vename,vjob,exp,vsal;
+end loop;
+close empcur;
+end//
+delimiter ;
+
+9.
+create table emp_allowance(
+empno int,
+ename varchar(20),
+hiredate date,
+experience int,
+allowance decimal(9,2)
+);
+
+function----
+
+set GLOBAL log_bin_trust_function_creators=1;
+delimiter //
+create function experience(ehiredate date) returns int
+begin
+declare exp int;
+set exp=floor(datediff(curdate(),ehiredate)/365);
+return exp;
+
+end//
+delimiter ;
+
+procedure----
+
+delimiter //
+create procedure addallowance()
+begin 
+declare vfinished int default 0;
+declare vempno,vexp int;
+declare vename varchar(20);
+declare vhiredate date;
+declare vallowance decimal(9,2);
+declare empcur cursor for select empno,ename,hiredate from emp;
+declare continue handler for NOT FOUND set vfinished=1;
+open empcur;
+label1:loop
+	fetch empcur into vempno,vename,vhiredate;
+	if vfinished=1 then
+		leave label1;
+	end if;
+
+select experience(vhiredate) into vexp from emp 
+where empno=vempno;
+if vexp>0 then
+	set vallowance=vexp*3000;
+else
+	set vallowance=0;
+end if;
+insert into emp_allowance (empno,ename,hiredate,experience,allowance)values(vempno,vename,vhiredate,vexp,vallowance);
+select vempno,vename,vhiredate,vexp,vallowance;
+end loop;
+close empcur;
+end//
+delimiter ;
+-----------------------------------------------
+set vexp =experience(vhiredate);
+set vallowance=vexp*3000;
+insert into emp_allowance values(vempno,vename,vhiredate,vexp,vallowance);
+select vempno,vename,vhiredate,vexp,vallowance;
+end loop;
+close empcur;
+end//
+
+10.
+
+set GLOBAL log_bin_trust_function_creators=1;
+
+delimiter //
+
+create function allowance(esal float(9,2),ehiredate date) returns float(9,2)
+
+begin
+
+declare exp int;
+declare da,hra,ta,spallo,cost float(9,2);
+set exp=floor(datediff(curdate(),ehiredate)/365);
+set da=esal*0.15;
+set hra=esal*0.20;
+set ta=esal*0.08;
+
+if exp<1 then
+	set spallo=0;
+elseif exp<2 then
+	set spallo=esal*0.10;
+elseif exp<4 then
+	set spallo=esal*0.20;
+else
+	set spallo=esal*0.30;
+end if;
+set cost=esal+da+hra+ta+spallo;
+return cost;
+end//
+delimiter ;
+
+11.
+select enamem,empno,sal,allowance(sal,hiredate) cost from emp;
+
+
+TRIGGER
+1.
+create table emp_back(
+empno int,
+ename varchar(20),
+oldsal decimal(9,2),
+newsal decimal(9,2),
+job varchar(20),
+deptno int,
+user varchar(20),
+edittime datetime,
+action varchar(20)
+);
+
+delimiter //
+create trigger updatesal before update on emp
+for each row
+insert into emp_back values(
+old.empno,old.ename,old.sal,new.sal,old.job,old.deptno,
+user(),now(),'update');
+
+
+2.
+create table emp_audit(
+newempno int,
+oldempno int,
+newename varchar(20),
+oldename varchar(20),
+user varchar(20),
+operationdate datetime,
+action varchar(20)
+);
+
+create trigger insertdetail before insert on emp
+for each row
+insert into emp_audit values(
+new.empno,null,new.ename,null,
+user(),now(),'insert'
+);
+
+create trigger deletedetails before delete on emp
+for each row
+insert into emp_audit values(
+null,old.empno,null,old.ename,
+user(),now(),'delete'
+);
+
+3.
+create table vehicle_history(
+vno int,
+vname varchar(20),
+oldprice decimal(9,2),
+newprice decimal(9,2),
+chdate date,
+username varchar(20)
+);
+
+create trigger updatevehicle before update on vehicle
+for each row
+insert into vehicle_history values(
+old.vid,old.vname,old.price,new.price,now(),user()
+);
+
+
+
+
